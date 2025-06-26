@@ -1,0 +1,8 @@
+streamlit
+openai
+cryptography
+requests
+hashlib2
+pillow
+pandas
+numpy
