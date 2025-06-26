@@ -368,65 +368,64 @@ with st.form(key="message_form"):
     send_message = st.form_submit_button("전송", type="primary")
 
 if send_message and user_input.strip():
-if send_message and user_input.strip():
-        # 토큰 한도 체크
-        can_use, _ = check_token_usage(user_code, st.session_state.faithgpt_total_tokens)
-        if not can_use:
-            st.error("토큰 한도를 초과했습니다. 새로운 대화를 시작해주세요.")
-            st.stop()
+    # 토큰 한도 체크
+    can_use, _ = check_token_usage(user_code, st.session_state.faithgpt_total_tokens)
+    if not can_use:
+        st.error("토큰 한도를 초과했습니다. 새로운 대화를 시작해주세요.")
+        st.stop()
+    
+    # 사용자 메시지 추가
+    st.session_state.faithgpt_messages.append({"role": "user", "content": user_input})
+    
+    # 토큰 계산
+    input_tokens = count_tokens(user_input)
+    
+    # 예상 응답 토큰까지 고려한 사전 체크 (체험 사용자만)
+    estimated_response_tokens = min(input_tokens * 2, 2000)  # 대략적 추정
+    user_limit = get_user_token_limit(user_code)
+    
+    if user_limit != -1:  # 제한된 사용자
+        if st.session_state.faithgpt_total_tokens + input_tokens + estimated_response_tokens > user_limit:
+            st.warning("응답을 생성하면 토큰 한도를 초과할 수 있습니다. 그래도 진행하시겠습니까?")
+            if not st.button("계속 진행", key="continue_anyway"):
+                # 마지막 메시지 제거하고 중단
+                st.session_state.faithgpt_messages.pop()
+                st.stop()
+    
+    st.session_state.faithgpt_total_tokens += input_tokens
+    
+    # OpenAI API 호출
+    try:
+        client = openai.OpenAI(api_key=faithgpt_api_key)
         
-        # 사용자 메시지 추가
-        st.session_state.faithgpt_messages.append({"role": "user", "content": user_input})
+        # 시스템 프롬프트 생성
+        system_prompt = get_system_prompt(user_info, selected_purpose, custom_age)
         
-        # 토큰 계산
-        input_tokens = count_tokens(user_input)
+        # 메시지 구성
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(st.session_state.faithgpt_messages)
         
-        # 예상 응답 토큰까지 고려한 사전 체크 (체험 사용자만)
-        estimated_response_tokens = min(input_tokens * 2, 2000)  # 대략적 추정
-        user_limit = get_user_token_limit(user_code)
+        # API 호출
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            max_tokens=2000,
+            temperature=0.7
+        )
         
-        if user_limit != -1:  # 제한된 사용자
-            if st.session_state.faithgpt_total_tokens + input_tokens + estimated_response_tokens > user_limit:
-                st.warning("응답을 생성하면 토큰 한도를 초과할 수 있습니다. 그래도 진행하시겠습니까?")
-                if not st.button("계속 진행", key="continue_anyway"):
-                    # 마지막 메시지 제거하고 중단
-                    st.session_state.faithgpt_messages.pop()
-                    st.stop()
+        assistant_message = response.choices[0].message.content
         
-        st.session_state.faithgpt_total_tokens += input_tokens
+        # 응답 메시지 추가
+        st.session_state.faithgpt_messages.append({"role": "assistant", "content": assistant_message})
         
-        # OpenAI API 호출
-        try:
-            client = openai.OpenAI(api_key=faithgpt_api_key)
-            
-            # 시스템 프롬프트 생성
-            system_prompt = get_system_prompt(user_info, selected_purpose, custom_age)
-            
-            # 메시지 구성
-            messages = [{"role": "system", "content": system_prompt}]
-            messages.extend(st.session_state.faithgpt_messages)
-            
-            # API 호출
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                max_tokens=2000,
-                temperature=0.7
-            )
-            
-            assistant_message = response.choices[0].message.content
-            
-            # 응답 메시지 추가
-            st.session_state.faithgpt_messages.append({"role": "assistant", "content": assistant_message})
-            
-            # 응답 토큰 계산
-            response_tokens = count_tokens(assistant_message)
-            st.session_state.faithgpt_total_tokens += response_tokens
-            
-            st.rerun()
-            
-        except Exception as e:
-            st.error(f"오류가 발생했습니다: {str(e)}")
+        # 응답 토큰 계산
+        response_tokens = count_tokens(assistant_message)
+        st.session_state.faithgpt_total_tokens += response_tokens
+        
+        st.rerun()
+        
+    except Exception as e:
+        st.error(f"오류가 발생했습니다: {str(e)}")
 
 # 하단 버튼들
 st.markdown("---")
