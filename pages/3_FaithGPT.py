@@ -1,6 +1,5 @@
 import streamlit as st
 import openai
-import tiktoken
 import json
 from datetime import datetime
 import io
@@ -87,14 +86,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 토큰 계산 함수
-def count_tokens(text, model="gpt-4"):
-    try:
-        encoding = tiktoken.encoding_for_model(model)
-        return len(encoding.encode(text))
-    except:
-        # 대략적인 추정 (1토큰 ≈ 4자)
-        return len(text) // 4
+# 토큰 계산 함수 (tiktoken 없이)
+def count_tokens(text):
+    """간단한 토큰 추정 (1토큰 ≈ 4자)"""
+    # 한글은 더 많은 토큰을 사용하므로 보수적으로 계산
+    korean_chars = len([c for c in text if ord(c) >= 0xAC00 and ord(c) <= 0xD7A3])
+    other_chars = len(text) - korean_chars
+    
+    # 한글: 1자당 1토큰, 영문: 4자당 1토큰으로 보수적 계산
+    estimated_tokens = korean_chars + (other_chars // 3)
+    return max(estimated_tokens, len(text) // 4)  # 최소값 보장
 
 # 사용자 코드 검증 및 정보 조회
 def verify_user_code(code):
@@ -195,6 +196,18 @@ with st.sidebar:
         if can_use:
             st.success(f"✅ {user_info['name']}님 환영합니다!")
             st.info(f"토큰 사용량: {usage_status}")
+            
+            # 디버깅 정보 (관리자만)
+            if user_code == "FAITH":
+                with st.expander("🔧 디버깅 정보 (관리자용)"):
+                    st.write("사용자 정보:", user_info)
+                    st.write("토큰 한도:", get_user_token_limit(user_code))
+                    try:
+                        st.write("Secrets 키 목록:", list(st.secrets.keys()))
+                        if "faithgpt" in st.secrets:
+                            st.write("FaithGPT 설정:", "API_KEY" in st.secrets["faithgpt"])
+                    except:
+                        st.write("Secrets 접근 오류")
         else:
             st.error(f"❌ {user_info['name']}님, 토큰 한도를 초과했습니다.")
             st.error(f"사용량: {usage_status}")
@@ -246,9 +259,18 @@ with st.sidebar:
         # API 키 확인
         try:
             faithgpt_api_key = st.secrets["faithgpt"]["API_KEY"]
-            st.success("🔑 API 연결 성공")
-        except:
-            st.error("❌ FaithGPT API 키가 설정되지 않았습니다")
+            if faithgpt_api_key and faithgpt_api_key.startswith("sk-"):
+                st.success("🔑 API 연결 성공")
+            else:
+                st.error("❌ FaithGPT API 키가 올바르지 않습니다")
+                st.info("Secrets에서 [faithgpt] API_KEY를 확인해주세요")
+                st.stop()
+        except KeyError as e:
+            st.error(f"❌ FaithGPT API 키가 설정되지 않았습니다: {str(e)}")
+            st.info("App settings > Secrets에서 [faithgpt] 섹션과 API_KEY를 확인해주세요")
+            st.stop()
+        except Exception as e:
+            st.error(f"❌ API 키 확인 중 오류: {str(e)}")
             st.stop()
             
     elif user_code:
@@ -453,4 +475,4 @@ with col3:
 
 # 푸터
 st.markdown("---")
-st.markdown("🤖 FaithGPT-4.1")
+st.markdown("**🤖 FaithGPT-4.1** - 기독교적 가치관을 바탕으로 한 AI 어시스턴트")
