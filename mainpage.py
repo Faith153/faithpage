@@ -4,8 +4,8 @@ your_app/
 ├── streamlit_app.py      ← 메인 페이지 스크립트
 │
 └── pages/                ← 추가 페이지들은 이 폴더에 넣기
-    ├── 1_About.py        ← 페이지 파일명 앞에 숫자 붙이면 순서 지정 가능
-    ├── 2_Contact.py
+    ├── 1_imagen.py        ← 페이지 파일명 앞에 숫자 붙이면 순서 지정 가능
+    ├── 2_BibleReading.py
     └── 3_Help.py
 '''
 
@@ -15,7 +15,7 @@ import pandas as pd
 
 
 st.title("Main Page")
-st.write("메인 페이지에 오신 것을 환영합니다.")
+st.write("Faith의 코딩 연습장")
 
 # 메인페이지 이미지 첨부(외부링크)
 img_url = "https://images.unsplash.com/photo-1506744038136-46273834b3fb"
