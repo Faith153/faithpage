@@ -68,6 +68,8 @@ st.markdown("""
         border-radius: 10px;
         margin: 5px 0;
         text-align: right;
+        color: #1565c0;
+        font-weight: 500;
     }
     
     .assistant-message {
@@ -75,6 +77,8 @@ st.markdown("""
         padding: 10px;
         border-radius: 10px;
         margin: 5px 0;
+        color: #4a148c;
+        font-weight: 500;
     }
     
     .warning-message {
@@ -82,6 +86,26 @@ st.markdown("""
         font-size: 12px;
         margin-top: 5px;
         font-weight: bold;
+    }
+    
+    /* 다크모드 대응 */
+    [data-theme="dark"] .chat-container {
+        background-color: #262730;
+        border-color: #464853;
+    }
+    
+    [data-theme="dark"] .user-message {
+        background-color: #1976d2;
+        color: #ffffff;
+    }
+    
+    [data-theme="dark"] .assistant-message {
+        background-color: #7b1fa2;
+        color: #ffffff;
+    }
+    
+    [data-theme="dark"] .token-gauge {
+        background-color: #464853;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -337,11 +361,14 @@ with chat_container:
     else:
         st.info("대화를 시작해보세요! 😊")
 
-# 사용자 입력
-user_input = st.text_area("메시지를 입력하세요:", height=100, key="user_input")
+# 사용자 입력 및 전송 처리
+with st.form(key="message_form"):
+    user_input = st.text_area("메시지를 입력하세요:", height=100, key="user_input", 
+                             help="Ctrl+Enter 또는 전송 버튼으로 메시지를 보낼 수 있습니다")
+    send_message = st.form_submit_button("전송", type="primary")
 
-if st.button("전송", type="primary"):
-    if user_input.strip():
+if send_message and user_input.strip():
+if send_message and user_input.strip():
         # 토큰 한도 체크
         can_use, _ = check_token_usage(user_code, st.session_state.faithgpt_total_tokens)
         if not can_use:
@@ -475,4 +502,4 @@ with col3:
 
 # 푸터
 st.markdown("---")
-st.markdown("**🤖 FaithGPT-4.1** - 기독교적 가치관을 바탕으로 한 AI 어시스턴트")
+st.markdown("**🤖 FaithGPT-4.1** - 믿음님의 지인들을 위한 ChatGPT")
