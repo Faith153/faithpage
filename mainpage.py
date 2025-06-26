@@ -17,6 +17,7 @@ import pandas as pd
 st.title("Faith의 코딩 연습장")
 st.write("1-이미지생성기")
 st.write("2-성경읽기표 : 그룹생성, 관리자, 개인별로그인 기능")
+st.write("  ㄴ예정 : 카카오톡봇을 통한 채팅방에서 명령어로 웹 현황판에 자동 기록?")
 st.write("3-예정 : 우리아이들 맞춤형 ChatGPT")
 
 # 메인페이지 이미지 첨부(외부링크)
