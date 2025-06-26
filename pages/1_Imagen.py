@@ -78,7 +78,7 @@ if fail_count >= 5:
         blocked = False
 
 # 3. 사이드바 코드 입력(비활성화/활성화)
-user_code = st.sidebar.text_input("이용자 코드 입력", max_chars=16, disabled=blocked)
+user_code = st.sidebar.text_input("이용자 코드 입력", max_chars=16, disabled=blocked, type="password")
 
 # 4. 코드별 한도(secrets.toml에서 바로!)
 user_limits = st.secrets["user_codes"]                   # secrets.toml의 [user_codes] 전체 딕셔너리
