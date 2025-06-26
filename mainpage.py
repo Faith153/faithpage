@@ -14,31 +14,18 @@ import streamlit.components.v1 as components
 import pandas as pd
 
 
-st.title("Main Page")
-st.write("Faith의 코딩 연습장")
+st.title("Faith의 코딩 연습장")
+st.write("1-이미지생성기")
+st.write("2-성경읽기표 : 그룹생성, 관리자, 개인별로그인 기능")
+st.write("3-예정 : 우리아이들 맞춤형 ChatGPT")
 
 # 메인페이지 이미지 첨부(외부링크)
-img_url = "https://images.unsplash.com/photo-1506744038136-46273834b3fb"
+img_url = "https://images.unsplash.com/photo-1615454782617-e69bbd4f2969?q=80&w=1656&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
 html_code = f"""
     <div style="display: flex; justify-content: center;">
         <img src="{img_url}" style="width:100%; max-width:1000px; border-radius:18px; box-shadow:2px 2px 16px #bbb;">
     </div>
 """
-components.html(html_code, height=500)
+components.html(html_code, height=700)
 
 #===============================================
-
-# 캐시 활용시 불러오는 시간이 반복되지 않음
-@st.cache_data
-def load_data(url):
-    df = pd.read_csv(url, nrows=10000)
-    st.write( df.shape )
-    st.write( df.columns) 
-    return df
-
-df = load_data("https://github.com/plotly/datasets/raw/master/uber-rides-data1.csv")
-st.dataframe(df)
-
-st.button("새로고침")  # 버튼 클릭 시 페이지 새로고침
-
-#=================================================
