@@ -11,7 +11,7 @@ st.set_page_config(
 st.title("🎮 Retro Pinball Game")
 
 # HTML 파일 읽기
-html_file_path = "6_pinball_game.html"
+html_file_path = "pates/6_pinball_game.html"
 if os.path.exists(html_file_path):
     with open(html_file_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
