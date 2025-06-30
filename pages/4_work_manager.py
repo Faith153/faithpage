@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import json
+import os
 from datetime import datetime, date, timedelta
 import calendar
 import openai
@@ -56,6 +57,9 @@ st.markdown("""
 
 class WorkManager:
     def __init__(self):
+        # 데이터 저장 파일 경로
+        self.data_file = "work_manager_data.json"
+        
         # secrets.toml에서 비밀번호 로드
         try:
             self.admin_password = st.secrets["work_manager"]["admin_password"]
@@ -98,15 +102,47 @@ class WorkManager:
     def load_tasks(self) -> List[Dict]:
         """저장된 업무 목록 로드"""
         try:
-            # 실제 환경에서는 데이터베이스나 파일에서 로드
-            return []
-        except:
+            if os.path.exists(self.data_file):
+                with open(self.data_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return data.get('tasks', [])
+            else:
+                # 파일이 없으면 빈 리스트 반환하고 기본 파일 생성
+                self.save_tasks([])
+                return []
+        except Exception as e:
+            st.error(f"데이터 로드 중 오류 발생: {e}")
             return []
 
-    def save_tasks(self):
+    def save_tasks(self, tasks=None):
         """업무 목록 저장"""
-        # 실제 환경에서는 데이터베이스나 파일에 저장
-        pass
+        try:
+            if tasks is None:
+                tasks = st.session_state.tasks
+            
+            data = {
+                'tasks': tasks,
+                'last_updated': datetime.now().isoformat()
+            }
+            
+            with open(self.data_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+                
+        except Exception as e:
+            st.error(f"데이터 저장 중 오류 발생: {e}")
+
+    def backup_data(self):
+        """데이터 백업 생성"""
+        try:
+            if os.path.exists(self.data_file):
+                backup_file = f"work_manager_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                with open(self.data_file, 'r', encoding='utf-8') as original:
+                    with open(backup_file, 'w', encoding='utf-8') as backup:
+                        backup.write(original.read())
+                return backup_file
+        except Exception as e:
+            st.error(f"백업 생성 중 오류 발생: {e}")
+            return None
 
     def get_openai_client(self):
         """OpenAI 클라이언트 초기화"""
@@ -417,7 +453,28 @@ class WorkManager:
         with st.sidebar:
             st.markdown(f"### {user_emoji} {self.get_user_name()}")
             st.markdown("---")
+            
+            # 데이터 관리 섹션
+            st.markdown("#### 📁 데이터 관리")
+            if st.button("💾 수동 저장", use_container_width=True):
+                self.save_tasks()
+                st.success("데이터가 저장되었습니다!")
+            
+            if st.button("🔄 백업 생성", use_container_width=True):
+                backup_file = self.backup_data()
+                if backup_file:
+                    st.success(f"백업이 생성되었습니다: {backup_file}")
+            
+            # 데이터 상태 표시
+            if os.path.exists(self.data_file):
+                file_stats = os.stat(self.data_file)
+                last_modified = datetime.fromtimestamp(file_stats.st_mtime)
+                st.markdown(f"**마지막 저장:** {last_modified.strftime('%m/%d %H:%M')}")
+            
+            st.markdown("---")
             if st.button("🚪 로그아웃", use_container_width=True):
+                # 로그아웃 전 자동 저장
+                self.save_tasks()
                 st.session_state.authenticated = False
                 st.session_state.current_user = None
                 st.session_state.user_role = None
