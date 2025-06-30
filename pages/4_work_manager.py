@@ -373,7 +373,7 @@ class WorkManager:
             
             # 메모 추가 기능
             notes = st.text_area("메모/진행상황", value=task.get('notes', ''), 
-                               key=f"notes_{task['id']}", height=60)
+                               key=f"notes_{task['id']}", height=70)
             if notes != task.get('notes', ''):
                 task['notes'] = notes
                 self.save_tasks()
