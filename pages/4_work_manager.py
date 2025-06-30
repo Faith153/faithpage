@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import json
-import hashlib
 from datetime import datetime, date, timedelta
 import calendar
 import openai
@@ -10,7 +9,7 @@ import uuid
 
 # 페이지 설정
 st.set_page_config(
-    page_title="디자인드림 업무관리시스템",
+    page_title="DD 업무관리시스템",
     page_icon="📋",
     layout="wide"
 )
@@ -57,32 +56,44 @@ st.markdown("""
 
 class WorkManager:
     def __init__(self):
-        self.users = {
-            "admin": {"password": "designdream2024!", "name": "대표"},
-            "manager": {"password": "manager2024!", "name": "총괄팀장"}
-        }
+        # secrets.toml에서 비밀번호 로드
+        try:
+            self.admin_password = st.secrets["work_manager"]["admin_password"]
+            self.manager_password = st.secrets["work_manager"]["manager_password"]
+        except Exception as e:
+            st.error("설정 파일 로드 오류. secrets.toml 파일을 확인해주세요.")
+            self.admin_password = None
+            self.manager_password = None
         
         # 세션 상태 초기화
         if 'authenticated' not in st.session_state:
             st.session_state.authenticated = False
         if 'current_user' not in st.session_state:
             st.session_state.current_user = None
+        if 'user_role' not in st.session_state:
+            st.session_state.user_role = None
         if 'tasks' not in st.session_state:
             st.session_state.tasks = self.load_tasks()
         if 'chat_history' not in st.session_state:
             st.session_state.chat_history = []
 
-    def hash_password(self, password: str) -> str:
-        """비밀번호 해시화"""
-        return hashlib.sha256(password.encode()).hexdigest()
-
-    def authenticate_user(self, username: str, password: str) -> bool:
-        """사용자 인증"""
-        if username in self.users and self.users[username]["password"] == password:
+    def authenticate_user(self, password: str) -> bool:
+        """비밀번호만으로 사용자 인증"""
+        if password == self.admin_password:
             st.session_state.authenticated = True
-            st.session_state.current_user = username
+            st.session_state.current_user = "대표"
+            st.session_state.user_role = "admin"
+            return True
+        elif password == self.manager_password:
+            st.session_state.authenticated = True
+            st.session_state.current_user = "총괄팀장"
+            st.session_state.user_role = "manager"
             return True
         return False
+
+    def get_user_name(self) -> str:
+        """현재 사용자 이름 반환"""
+        return st.session_state.get('current_user', '사용자')
 
     def load_tasks(self) -> List[Dict]:
         """저장된 업무 목록 로드"""
@@ -115,15 +126,16 @@ class WorkManager:
         
         try:
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4.1",
                 messages=[
                     {"role": "system", "content": """당신은 디자인드림의 업무 관리 어시스턴트입니다. 
                     승화전사 전문 기업의 대표와 총괄팀장의 업무 효율성을 높이는 데 도움을 주세요.
-                    간결하고 실용적인 조언을 제공하며, 업무 우선순위나 처리 방법에 대한 제안을 해주세요."""},
+                    간결하고 실용적인 조언을 제공하며, 업무 우선순위나 처리 방법에 대한 제안을 해주세요.
+                    내부 업무를 효율적으로 하기 위한 부분에 집중합니다."""},
                     {"role": "user", "content": message}
                 ],
-                max_tokens=500,
-                temperature=0.7
+                max_tokens=10000,
+                temperature=0.2
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -136,15 +148,15 @@ class WorkManager:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.subheader("🔐 로그인")
-            username = st.text_input("사용자명", placeholder="admin 또는 manager")
-            password = st.text_input("비밀번호", type="password")
+            st.info("💡 접속코드를 입력하세요")
+            password = st.text_input("접속코드", type="password", placeholder="접속코드를 입력해주세요")
             
             if st.button("로그인", use_container_width=True):
-                if self.authenticate_user(username, password):
-                    st.success(f"{self.users[username]['name']}님, 환영합니다!")
+                if self.authenticate_user(password):
+                    st.success(f"{self.get_user_name()}님, 환영합니다!")
                     st.rerun()
                 else:
-                    st.error("사용자명 또는 비밀번호가 올바르지 않습니다.")
+                    st.error("접속코드가 올바르지 않습니다.")
 
     def render_calendar(self):
         """월별 캘린더 렌더링"""
@@ -366,7 +378,8 @@ class WorkManager:
 
     def render_dashboard(self):
         """대시보드 렌더링"""
-        st.markdown('<div class="main-header"><h1>📊 디자인드림 업무관리 대시보드</h1></div>', unsafe_allow_html=True)
+        user_emoji = "👑" if st.session_state.user_role == "admin" else "👨‍💼"
+        st.markdown(f'<div class="main-header"><h1>📊 디자인드림 업무관리 대시보드</h1><p>{user_emoji} {self.get_user_name()}님 환영합니다</p></div>', unsafe_allow_html=True)
         
         # 상단 통계
         col1, col2, col3, col4 = st.columns(4)
@@ -401,10 +414,14 @@ class WorkManager:
             self.render_ai_assistant()
         
         # 로그아웃 버튼
-        if st.sidebar.button("로그아웃"):
-            st.session_state.authenticated = False
-            st.session_state.current_user = None
-            st.rerun()
+        with st.sidebar:
+            st.markdown(f"### {user_emoji} {self.get_user_name()}")
+            st.markdown("---")
+            if st.button("🚪 로그아웃", use_container_width=True):
+                st.session_state.authenticated = False
+                st.session_state.current_user = None
+                st.session_state.user_role = None
+                st.rerun()
 
     def run(self):
         """메인 실행 함수"""
