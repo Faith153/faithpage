@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Pinball Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            position: relative;
+        }
+
+        .pinball-machine {
+            width: 400px;
+            height: 600px;
+            background: linear-gradient(145deg, #2c2c54, #40407a);
+            border: 8px solid #706fd3;
+            border-radius: 20px;
+            position: relative;
+            box-shadow: 
+                0 0 30px rgba(112, 111, 211, 0.5),
+                inset 0 0 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .game-area {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+
+        .ball {
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle at 30% 30%, #fff, #ff6b6b, #ee5a52);
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 
+                0 0 10px rgba(255, 107, 107, 0.8),
+                0 0 20px rgba(255, 107, 107, 0.4);
+            transition: all 0.1s ease;
+            z-index: 10;
+        }
+
+        .flipper {
+            position: absolute;
+            background: linear-gradient(45deg, #ffa726, #ff9800);
+            border-radius: 15px;
+            transform-origin: center;
+            box-shadow: 0 0 10px rgba(255, 167, 38, 0.6);
+            transition: transform 0.1s ease;
+        }
+
+        .flipper-left {
+            width: 60px;
+            height: 8px;
+            bottom: 50px;
+            left: 80px;
+            transform: rotate(-30deg);
+        }
+
+        .flipper-right {
+            width: 60px;
+            height: 8px;
+            bottom: 50px;
+            right: 80px;
+            transform: rotate(30deg);
+        }
+
+        .flipper.active {
+            transform: rotate(0deg) !important;
+        }
+
+        .bumper {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, #4ecdc4, #26d0ce, #1dd1a1);
+            border-radius: 50%;
+            box-shadow: 
+                0 0 15px rgba(77, 205, 196, 0.8),
+                inset 0 0 10px rgba(255, 255, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .bumper:nth-child(1) { top: 150px; left: 100px; }
+        .bumper:nth-child(2) { top: 120px; right: 100px; }
+        .bumper:nth-child(3) { top: 200px; left: 180px; }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .bumper.hit {
+            animation: hit 0.3s ease;
+        }
+
+        @keyframes hit {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); box-shadow: 0 0 25px rgba(77, 205, 196, 1); }
+            100% { transform: scale(1); }
+        }
+
+        .launcher {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: 20px;
+            height: 100px;
+            background: linear-gradient(180deg, #ff6b6b, #ee5a52);
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.6);
+            transition: all 0.1s ease;
+        }
+
+        .launcher:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.8);
+        }
+
+        .launcher.pressed {
+            transform: scale(0.95);
+            background: linear-gradient(180deg, #ee5a52, #c44569);
+        }
+
+        .score-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffa726;
+            text-shadow: 0 0 10px rgba(255, 167, 38, 0.8);
+            z-index: 20;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 20;
+        }
+
+        .control-btn {
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .obstacle {
+            position: absolute;
+            background: linear-gradient(45deg, #ff9a9e, #fecfef);
+            border-radius: 5px;
+            box-shadow: 0 0 8px rgba(255, 154, 158, 0.6);
+        }
+
+        .obstacle:nth-child(1) { width: 15px; height: 40px; top: 300px; left: 50px; }
+        .obstacle:nth-child(2) { width: 15px; height: 40px; top: 280px; right: 50px; }
+        .obstacle:nth-child(3) { width: 40px; height: 15px; top: 350px; left: 150px; }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #ffa726;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle-explosion 0.6s ease-out forwards;
+        }
+
+        @keyframes particle-explosion {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0) translate(var(--dx), var(--dy));
+            }
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            border: 2px solid #ffa726;
+            box-shadow: 0 0 30px rgba(255, 167, 38, 0.5);
+        }
+
+        .neon-text {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffa726;
+            text-shadow: 
+                0 0 5px #ffa726,
+                0 0 10px #ffa726,
+                0 0 15px #ffa726,
+                0 0 20px #ffa726;
+            animation: neon-flicker 2s infinite alternate;
+        }
+
+        @keyframes neon-flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .instructions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            max-width: 150px;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="pinball-machine">
+            <div class="game-area">
+                <div class="score-display">Score: <span id="score">0</span></div>
+                
+                <div class="instructions">
+                    <div>Controls:</div>
+                    <div>Space: Launch</div>
+                    <div>A/D: Flippers</div>
+                    <div>Click: Launch</div>
+                </div>
+
+                <div class="ball" id="ball"></div>
+                
+                <div class="bumper"></div>
+                <div class="bumper"></div>
+                <div class="bumper"></div>
+                
+                <div class="obstacle"></div>
+                <div class="obstacle"></div>
+                <div class="obstacle"></div>
+                
+                <div class="flipper flipper-left" id="leftFlipper"></div>
+                <div class="flipper flipper-right" id="rightFlipper"></div>
+                
+                <div class="launcher" id="launcher"></div>
+                
+                <div class="game-over" id="gameOver">
+                    <div class="neon-text">GAME OVER</div>
+                    <div style="margin: 20px 0;">Final Score: <span id="finalScore">0</span></div>
+                    <button class="control-btn" onclick="restartGame()">Play Again</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" onclick="activateLeftFlipper()">Left Flipper (A)</button>
+            <button class="control-btn" onclick="launchBall()">Launch (Space)</button>
+            <button class="control-btn" onclick="activateRightFlipper()">Right Flipper (D)</button>
+        </div>
+    </div>
+
+    <script>
+        class PinballGame {
+            constructor() {
+                this.ball = document.getElementById('ball');
+                this.scoreElement = document.getElementById('score');
+                this.gameOverElement = document.getElementById('gameOver');
+                this.finalScoreElement = document.getElementById('finalScore');
+                this.leftFlipper = document.getElementById('leftFlipper');
+                this.rightFlipper = document.getElementById('rightFlipper');
+                this.launcher = document.getElementById('launcher');
+                
+                this.ballX = 350;
+                this.ballY = 500;
+                this.ballVX = 0;
+                this.ballVY = 0;
+                this.score = 0;
+                this.gameRunning = false;
+                this.gravity = 0.3;
+                this.friction = 0.98;
+                this.bounceStrength = 0.8;
+                
+                this.gameArea = {
+                    width: 384,
+                    height: 584,
+                    left: 8,
+                    top: 8
+                };
+                
+                this.bumpers = [
+                    {x: 115, y: 165, radius: 15},
+                    {x: 285, y: 135, radius: 15},
+                    {x: 195, y: 215, radius: 15}
+                ];
+                
+                this.obstacles = [
+                    {x: 50, y: 300, width: 15, height: 40},
+                    {x: 319, y: 280, width: 15, height: 40},
+                    {x: 150, y: 350, width: 40, height: 15}
+                ];
+                
+                this.init();
+            }
+            
+            init() {
+                this.updateBallPosition();
+                this.setupEventListeners();
+                this.gameLoop();
+            }
+            
+            setupEventListeners() {
+                document.addEventListener('keydown', (e) => {
+                    switch(e.code) {
+                        case 'Space':
+                            e.preventDefault();
+                            this.launchBall();
+                            break;
+                        case 'KeyA':
+                            this.activateLeftFlipper();
+                            break;
+                        case 'KeyD':
+                            this.activateRightFlipper();
+                            break;
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    if(e.code === 'KeyA') {
+                        this.deactivateLeftFlipper();
+                    }
+                    if(e.code === 'KeyD') {
+                        this.deactivateRightFlipper();
+                    }
+                });
+                
+                this.launcher.addEventListener('mousedown', () => {
+                    this.launcher.classList.add('pressed');
+                });
+                
+                this.launcher.addEventListener('mouseup', () => {
+                    this.launcher.classList.remove('pressed');
+                    this.launchBall();
+                });
+                
+                this.launcher.addEventListener('mouseleave', () => {
+                    this.launcher.classList.remove('pressed');
+                });
+            }
+            
+            launchBall() {
+                if (!this.gameRunning && this.ballY > 450) {
+                    this.ballVX = -2 + Math.random() * 4;
+                    this.ballVY = -15 - Math.random() * 5;
+                    this.gameRunning = true;
+                    this.playSound('launch');
+                }
+            }
+            
+            activateLeftFlipper() {
+                this.leftFlipper.classList.add('active');
+                if (this.checkFlipperCollision('left')) {
+                    this.ballVX = -8;
+                    this.ballVY = -6;
+                    this.playSound('flipper');
+                }
+            }
+            
+            deactivateLeftFlipper() {
+                this.leftFlipper.classList.remove('active');
+            }
+            
+            activateRightFlipper() {
+                this.rightFlipper.classList.add('active');
+                if (this.checkFlipperCollision('right')) {
+                    this.ballVX = 8;
+                    this.ballVY = -6;
+                    this.playSound('flipper');
+                }
+            }
+            
+            deactivateRightFlipper() {
+                this.rightFlipper.classList.remove('active');
+            }
+            
+            checkFlipperCollision(side) {
+                const ballRadius = 6;
+                const flipperY = 534;
+                const flipperHeight = 8;
+                
+                if (side === 'left') {
+                    const flipperX = 80;
+                    const flipperWidth = 60;
+                    return (this.ballX - ballRadius < flipperX + flipperWidth &&
+                            this.ballX + ballRadius > flipperX &&
+                            this.ballY + ballRadius > flipperY &&
+                            this.ballY - ballRadius < flipperY + flipperHeight);
+                } else {
+                    const flipperX = 244;
+                    const flipperWidth = 60;
+                    return (this.ballX - ballRadius < flipperX + flipperWidth &&
+                            this.ballX + ballRadius > flipperX &&
+                            this.ballY + ballRadius > flipperY &&
+                            this.ballY - ballRadius < flipperY + flipperHeight);
+                }
+            }
+            
+            updatePhysics() {
+                if (!this.gameRunning) return;
+                
+                // Apply gravity
+                this.ballVY += this.gravity;
+                
+                // Apply friction
+                this.ballVX *= this.friction;
+                this.ballVY *= this.friction;
+                
+                // Update position
+                this.ballX += this.ballVX;
+                this.ballY += this.ballVY;
+                
+                // Wall collisions
+                const ballRadius = 6;
+                
+                // Left and right walls
+                if (this.ballX - ballRadius <= 0 || this.ballX + ballRadius >= this.gameArea.width) {
+                    this.ballVX = -this.ballVX * this.bounceStrength;
+                    this.ballX = Math.max(ballRadius, Math.min(this.gameArea.width - ballRadius, this.ballX));
+                    this.playSound('wall');
+                }
+                
+                // Top wall
+                if (this.ballY - ballRadius <= 0) {
+                    this.ballVY = -this.ballVY * this.bounceStrength;
+                    this.ballY = ballRadius;
+                    this.playSound('wall');
+                }
+                
+                // Bottom (game over)
+                if (this.ballY + ballRadius >= this.gameArea.height) {
+                    this.gameOver();
+                    return;
+                }
+                
+                // Bumper collisions
+                this.checkBumperCollisions();
+                
+                // Obstacle collisions
+                this.checkObstacleCollisions();
+                
+                this.updateBallPosition();
+            }
+            
+            checkBumperCollisions() {
+                const ballRadius = 6;
+                
+                this.bumpers.forEach((bumper, index) => {
+                    const dx = this.ballX - bumper.x;
+                    const dy = this.ballY - bumper.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < ballRadius + bumper.radius) {
+                        // Collision detected
+                        const angle = Math.atan2(dy, dx);
+                        const speed = Math.sqrt(this.ballVX * this.ballVX + this.ballVY * this.ballVY);
+                        
+                        this.ballVX = Math.cos(angle) * (speed + 3);
+                        this.ballVY = Math.sin(angle) * (speed + 3);
+                        
+                        // Move ball outside bumper
+                        const overlap = ballRadius + bumper.radius - distance;
+                        this.ballX += Math.cos(angle) * overlap;
+                        this.ballY += Math.sin(angle) * overlap;
+                        
+                        // Visual effect
+                        const bumperElement = document.querySelectorAll('.bumper')[index];
+                        bumperElement.classList.add('hit');
+                        setTimeout(() => bumperElement.classList.remove('hit'), 300);
+                        
+                        // Score and effects
+                        this.addScore(100);
+                        this.createParticles(bumper.x, bumper.y);
+                        this.playSound('bumper');
+                    }
+                });
+            }
+            
+            checkObstacleCollisions() {
+                const ballRadius = 6;
+                
+                this.obstacles.forEach(obstacle => {
+                    if (this.ballX + ballRadius > obstacle.x &&
+                        this.ballX - ballRadius < obstacle.x + obstacle.width &&
+                        this.ballY + ballRadius > obstacle.y &&
+                        this.ballY - ballRadius < obstacle.y + obstacle.height) {
+                        
+                        // Simple collision response
+                        const centerX = obstacle.x + obstacle.width / 2;
+                        const centerY = obstacle.y + obstacle.height / 2;
+                        
+                        if (Math.abs(this.ballX - centerX) > Math.abs(this.ballY - centerY)) {
+                            this.ballVX = -this.ballVX * this.bounceStrength;
+                        } else {
+                            this.ballVY = -this.ballVY * this.bounceStrength;
+                        }
+                        
+                        this.addScore(50);
+                        this.playSound('obstacle');
+                    }
+                });
+            }
+            
+            createParticles(x, y) {
+                for (let i = 0; i < 6; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = x + 'px';
+                    particle.style.top = y + 'px';
+                    
+                    const angle = (Math.PI * 2 * i) / 6;
+                    const distance = 30 + Math.random() * 20;
+                    particle.style.setProperty('--dx', Math.cos(angle) * distance + 'px');
+                    particle.style.setProperty('--dy', Math.sin(angle) * distance + 'px');
+                    
+                    document.querySelector('.game-area').appendChild(particle);
+                    
+                    setTimeout(() => particle.remove(), 600);
+                }
+            }
+            
+            addScore(points) {
+                this.score += points;
+                this.scoreElement.textContent = this.score;
+            }
+            
+            updateBallPosition() {
+                this.ball.style.left = this.ballX - 6 + 'px';
+                this.ball.style.top = this.ballY - 6 + 'px';
+            }
+            
+            gameOver() {
+                this.gameRunning = false;
+                this.finalScoreElement.textContent = this.score;
+                this.gameOverElement.style.display = 'block';
+                this.playSound('gameOver');
+            }
+            
+            restart() {
+                this.ballX = 350;
+                this.ballY = 500;
+                this.ballVX = 0;
+                this.ballVY = 0;
+                this.score = 0;
+                this.gameRunning = false;
+                this.scoreElement.textContent = '0';
+                this.gameOverElement.style.display = 'none';
+                this.updateBallPosition();
+            }
+            
+            playSound(type) {
+                // Create audio context for sound effects
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                switch(type) {
+                    case 'launch':
+                        oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(100, this.audioContext.currentTime + 0.3);
+                        gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                        oscillator.start();
+                        oscillator.stop(this.audioContext.currentTime + 0.3);
+                        break;
+                    case 'bumper':
+                        oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
+                        gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                        oscillator.start();
+                        oscillator.stop(this.audioContext.currentTime + 0.1);
+                        break;
+                    case 'flipper':
+                        oscillator.frequency.setValueAtTime(300, this.audioContext.currentTime);
+                        gainNode.gain.setValueAtTime(0.15, this.audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.05);
+                        oscillator.start();
+                        oscillator.stop(this.audioContext.currentTime + 0.05);
+                        break;
+                    case 'wall':
+                        oscillator.frequency.setValueAtTime(150, this.audioContext.currentTime);
+                        gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                        oscillator.start();
+                        oscillator.stop(this.audioContext.currentTime + 0.1);
+                        break;
+                    case 'obstacle':
+                        oscillator.frequency.setValueAtTime(400, this.audioContext.currentTime);
+                        gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.08);
+                        oscillator.start();
+                        oscillator.stop(this.audioContext.currentTime + 0.08);
+                        break;
+                    case 'gameOver':
+                        oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(50, this.audioContext.currentTime + 1);
+                        gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 1);
+                        oscillator.start();
+                        oscillator.stop(this.audioContext.currentTime + 1);
+                        break;
+                }
+            }
+            
+            gameLoop() {
+                this.updatePhysics();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+        
+        // Global functions for buttons
+        let game;
+        
+        function activateLeftFlipper() {
+            game.activateLeftFlipper();
+            setTimeout(() => game.deactivateLeftFlipper(), 100);
+        }
+        
+        function activateRightFlipper() {
+            game.activateRightFlipper();
+            setTimeout(() => game.deactivateRightFlipper(), 100);
+        }
+        
+        function launchBall() {
+            game.launchBall();
+        }
+        
+        function restartGame() {
+            game.restart();
+        }
+        
+        // Initialize game when page loads
+        window.addEventListener('load', () => {
+            game = new PinballGame();
+        });
+    </script>
+</body>
+</html>
