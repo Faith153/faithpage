@@ -143,7 +143,7 @@ class WorkManager:
 
     def render_login(self):
         """로그인 화면"""
-        st.markdown('<div class="main-header"><h1>🏢 디자인드림 업무관리시스템</h1></div>', unsafe_allow_html=True)
+        st.markdown('<div class="main-header"><h1>🏢 DD 업무관리시스템</h1></div>', unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
